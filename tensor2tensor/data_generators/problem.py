@@ -916,6 +916,10 @@ class Problem(object):
                                             max_length)
 
     dataset = dataset.filter(tpu_valid_size)
+    def _debug(example, msg):
+      example['inputs'] = tf.Print(example['inputs'], [], msg)
+      return example
+    dataset = dataset.map(functools.partial(_debug, msg='post-filtering'))
     padded_shapes = self._pad_for_tpu(dataset.output_shapes, hparams)
     tf.logging.info(f'Padding features for fixed inputs: {padded_shapes}')
     tf.logging.info(f'Batch size per shard: {batch_size} / {num_shards}')
@@ -927,9 +931,11 @@ class Problem(object):
         "size that has no remainder in that case.")
       dataset = dataset.padded_batch(
         batch_size, padded_shapes, drop_remainder=False)
+      dataset = dataset.map(functools.partial(_debug, msg='post-padded-batch'))
       dataset = dataset.map(
         functools.partial(pad_batch, batch_multiple=batch_size),
         num_parallel_calls=num_threads)
+      dataset = dataset.map(functools.partial(_debug, msg='post-map-pad-batch'))
     else:
       dataset = dataset.padded_batch(
         batch_size, padded_shapes, drop_remainder=True)
