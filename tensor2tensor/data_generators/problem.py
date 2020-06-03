@@ -917,7 +917,7 @@ class Problem(object):
 
     dataset = dataset.filter(tpu_valid_size)
     def _debug(example, msg):
-      example['inputs'] = tf.Print(example['inputs'], [], msg)
+      example['inputs'] = tf.Print(example['inputs'], [v.shape for v in example.values()], msg)
       return example
     dataset = dataset.map(functools.partial(_debug, msg='post-filtering'))
     padded_shapes = self._pad_for_tpu(dataset.output_shapes, hparams)
