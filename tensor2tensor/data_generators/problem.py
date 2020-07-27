@@ -913,11 +913,20 @@ class Problem(object):
       return example
 
     max_length = self.max_length(hparams)
+    max_targets_len = (hparams.max_target_seq_length * hparams.max_docs_per_packed_example)
 
     def tpu_valid_size(example):
       example = _debug(example, f'pre-filtering min_length={hparams.min_length}; max_length={max_length}')
-      return data_reader.example_valid_size(example, hparams.min_length,
-                                            max_length)
+      example_wo_targets = example.copy()
+      del example_wo_targets['targets']
+      return tf.logical_and(
+        data_reader.example_valid_size(
+          example=example_wo_targets,
+          min_length=hparams.min_length,
+          max_length=max_length,
+        ),
+        tf.shape(example['targets'])[0] <= max_targets_len,
+      )
 
     dataset = dataset.filter(tpu_valid_size)
     dataset = dataset.map(functools.partial(_debug, msg='post-filtering'))
